@@ -419,7 +419,7 @@ h1{font-size:22px;font-weight:750;letter-spacing:.01em}
     <section class="card music" id="musicCard">
       <img class="mcover" id="mCover" src="assets/oguri.jpg" alt="">
       <div class="minfo">
-        <div class="mtitle" id="mTitle">Bazovyi Minimum (Hoodtrap)</div>
+        <div class="mtitle" id="mTitle">House Of Memories</div>
         <div class="martist" id="mArtist">SoundCloud</div>
         <div class="mprog"><b id="mProg"></b></div>
       </div>
@@ -547,7 +547,7 @@ aboutEl.innerHTML = renderAbout(CONFIG.ABOUT.join('\n'));
 /* ============================================================
    TRÌNH PHÁT NHẠC — SoundCloud (phát khi bấm "XEM PROFILE")
    ============================================================ */
-const SC_TRACK = 'https://soundcloud.com/aleksandr-kuparev/bazovyi-minimum-hoodtrap';
+const SC_TRACK = 'https://soundcloud.com/tyler-biggs-6/house-of-memories';
 (function(){
   const card = document.getElementById('musicCard');
   const btn  = document.getElementById('mBtn');
@@ -675,7 +675,7 @@ function spawnBubble(text){
   document.body.appendChild(el);
   el.animate(
     [{transform:'translateX(-32vw)'},{transform:'translateX(115vw)'}],
-    {duration: 13000 + Math.random()*8000, easing:'linear'}
+    {duration: 9000 + Math.random()*13000, easing:'linear'}
   ).onfinish = ()=>el.remove();
 }
 document.getElementById('msgForm').addEventListener('submit', async e=>{
@@ -691,6 +691,7 @@ document.getElementById('msgForm').addEventListener('submit', async e=>{
       return;
     }
     spawnBubble(text);
+    commentList.push({text});   /* cho vào kho để sau này bay lại */
   }catch(err){ spawnBubble(text); }
 });
 /* tính vị trí làn bay: nằm dưới khối profile, không chạm các thẻ */
@@ -709,23 +710,26 @@ let bubbleTimer = null;
 loadComments().then(list=>{
   if (Array.isArray(list)) commentList = list;
 }).catch(()=>{});
+/* "túi comment xáo trộn" — comment nào cũng được hiện đúng 1 lần,
+   chỉ khi túi cạn mới xáo lại (không bao giờ trùng nhau) */
+let bag = [];
+function pickNoRepeat(){
+  if(!bag.length) bag = commentList.slice().sort(()=>Math.random()-.5);
+  return bag.pop();
+}
 /* chỉ chạy sau khi bấm "XEM PROFILE":
-   bong bóng đầu xuất hiện sau 2-5 giây NGẪU NHIÊN,
-   rồi cứ mỗi 5 giây lại chọn NGẪU NHIÊN 1 comment cho bay */
+   - bong bóng xuất hiện NGẪU NHIÊN từng cái: sau mỗi cái lại đợi 1.5-6 giây ngẫu nhiên
+   - comment nào hiện cũng NGẪU NHIÊN + KHÔNG TRÙNG (túi xáo trộn) */
 function startBubbleLoop(){
   if (bubbleTimer) return;
-  const next = ()=>{
-    if(!commentList.length) return;
-    const burst = 3 + Math.floor(Math.random()*3);   /* 3-5 bong bóng / đợt */
-    for(let i=0; i<burst; i++){
-      setTimeout(()=>{
-        const c = commentList[Math.floor(Math.random()*commentList.length)];
-        spawnBubble(c.text);
-      }, Math.random()*3000);                        /* dàn trải trong 3 giây */
+  const loop = ()=>{
+    if (commentList.length){
+      const c = pickNoRepeat();
+      if (c) spawnBubble(c.text);
     }
+    bubbleTimer = setTimeout(loop, 1500 + Math.random()*4500);   /* nhịp ngẫu nhiên */
   };
-  setTimeout(next, 2000 + Math.random()*3000);
-  bubbleTimer = setInterval(next, 5000);
+  bubbleTimer = setTimeout(loop, 2000 + Math.random()*3000);
 }
 
 /* copy username khi nhấn vào handle */
@@ -1101,5 +1105,5 @@ fetch('https://dcdn.dstn.to/profile/'+CONFIG.DISCORD_ID)
   requestAnimationFrame(frame);
 })();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2888aafb8e80960',t:'MTc4NjI5NzE4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2896345af9476b3',t:'MTc4NjMwNjA1NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
