@@ -451,8 +451,8 @@ const CONFIG = {
   }
 };
 /* ===== SUPABASE — dán 2 giá trị vào đây để comment lưu được khi up Vercel ===== */
-CONFIG.SUPABASE_URL      = "https://hipdicddmppwhttyazbb.supabase.co";   // vd: "https://xyzxyz.supabase.co"
-CONFIG.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpcGRpY2RkbXBwd2h0dHlhemJiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjI4MTcxNiwiZXhwIjoyMTAxODU3NzE2fQ.aV2dG8_L7uuHQbLnx7STxTLRTCmyJgWl3cA1xx3paEI";   // anon public key
+CONFIG.SUPABASE_URL      = "https://hipdicddmppwhttyazbb.supabase.co";
+CONFIG.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpcGRpY2RkbXBwd2h0dHlhemJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyODE3MTYsImV4cCI6MjEwMTg1NzcxNn0.NdaDA0szKqnBx06ccmssafTQb23-CgRmOLAB16V8Dw0";
 
 /* ============================================================
    SVG ICONS
@@ -622,7 +622,8 @@ const SC_TRACK = 'https://soundcloud.com/aleksandr-kuparev/bazovyi-minimum-hoodt
    không có -> dùng server.py cục bộ (comment.json)
    ============================================================ */
 const SB = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) ? {
-  url: CONFIG.SUPABASE_URL.replace(/\/$/,'') + '/rest/v1/comments',
+  /* chuẩn hóa: cắt /rest/v1 thừa nếu lỡ dán cả endpoint */
+  url: CONFIG.SUPABASE_URL.replace(/\/+$/,'').replace(/\/rest\/v1$/,'') + '/rest/v1/comments',
   key: CONFIG.SUPABASE_ANON_KEY,
   hdr: {apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: 'Bearer '+CONFIG.SUPABASE_ANON_KEY}
 } : null;
@@ -704,16 +705,28 @@ function laneY(){
 
 /* tải các comment cũ và cho chúng bay lượn */
 let commentList = [];
+let bubbleTimer = null;
 loadComments().then(list=>{
   if (Array.isArray(list)) commentList = list;
-  let i = 0;
+}).catch(()=>{});
+/* chỉ chạy sau khi bấm "XEM PROFILE":
+   bong bóng đầu xuất hiện sau 2-5 giây NGẪU NHIÊN,
+   rồi cứ mỗi 5 giây lại chọn NGẪU NHIÊN 1 comment cho bay */
+function startBubbleLoop(){
+  if (bubbleTimer) return;
   const next = ()=>{
     if(!commentList.length) return;
-    spawnBubble(commentList[i % commentList.length].text); i++;
+    const burst = 3 + Math.floor(Math.random()*3);   /* 3-5 bong bóng / đợt */
+    for(let i=0; i<burst; i++){
+      setTimeout(()=>{
+        const c = commentList[Math.floor(Math.random()*commentList.length)];
+        spawnBubble(c.text);
+      }, Math.random()*3000);                        /* dàn trải trong 3 giây */
+    }
   };
-  next();
-  setInterval(next, 10000);  /* cứ 10 giây 1 bong bóng */                 /* cứ 4.5s lại có 1 bong bóng bay qua */
-}).catch(()=>{});
+  setTimeout(next, 2000 + Math.random()*3000);
+  bubbleTimer = setInterval(next, 5000);
+}
 
 /* copy username khi nhấn vào handle */
 document.getElementById('handles').addEventListener('click', function(){
@@ -762,6 +775,7 @@ tickClock(); setInterval(tickClock, 1000);
   btn.addEventListener('click', ()=>{
     overlay.classList.add('go');
     document.body.classList.add('unlocked');       /* các thẻ profile hiện dần */
+    startBubbleLoop();                             /* bắt đầu cho bong bóng bay */
     if (window.__playMusic) window.__playMusic();  /* click = cử chỉ -> trình duyệt cho phát nhạc */
     setTimeout(()=>overlay.remove(), 900);
   });
@@ -1087,5 +1101,5 @@ fetch('https://dcdn.dstn.to/profile/'+CONFIG.DISCORD_ID)
   requestAnimationFrame(frame);
 })();
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2888aafb8e80960',t:'MTc4NjI5NzE4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
