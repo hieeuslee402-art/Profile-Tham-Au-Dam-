@@ -450,6 +450,9 @@ const CONFIG = {
     bot       : "https://discord.com/oauth2/authorize?client_id=1535176009874153545&permissions=8&integration_type=0&scope=bot",
   }
 };
+/* ===== SUPABASE — dán 2 giá trị vào đây để comment lưu được khi up Vercel ===== */
+CONFIG.SUPABASE_URL      = "https://hipdicddmppwhttyazbb.supabase.co/rest/v1/";   // vd: "https://xyzxyz.supabase.co"
+CONFIG.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpcGRpY2RkbXBwd2h0dHlhemJiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjI4MTcxNiwiZXhwIjoyMTAxODU3NzE2fQ.aV2dG8_L7uuHQbLnx7STxTLRTCmyJgWl3cA1xx3paEI";   // anon public key
 
 /* ============================================================
    SVG ICONS
@@ -614,8 +617,55 @@ const SC_TRACK = 'https://soundcloud.com/aleksandr-kuparev/bazovyi-minimum-hoodt
 
 /* ô nhắn tin -> mở hội thoại Discord */
 /* ============================================================
-   COMMENT — lưu vào comment.json + bong bóng bay ngang màn hình
+   COMMENT — bong bóng bay ngang màn hình
+   Backend tự chọn: có key Supabase -> dùng Supabase (chạy được trên Vercel),
+   không có -> dùng server.py cục bộ (comment.json)
    ============================================================ */
+const SB = (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY) ? {
+  url: CONFIG.SUPABASE_URL.replace(/\/$/,'') + '/rest/v1/comments',
+  key: CONFIG.SUPABASE_ANON_KEY,
+  hdr: {apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: 'Bearer '+CONFIG.SUPABASE_ANON_KEY}
+} : null;
+
+async function myIP(){
+  if (window.__ip !== undefined) return window.__ip;
+  try{
+    const r = await fetch('https://api.ipify.org?format=json');
+    window.__ip = (await r.json()).ip || '?';
+  }catch(e){ window.__ip = '?'; }
+  return window.__ip;
+}
+async function loadComments(){
+  if (SB){
+    const r = await fetch(SB.url + '?select=text&order=created_at.asc&limit=100', {headers: SB.hdr});
+    const list = await r.json();
+    return Array.isArray(list) ? list : [];
+  }
+  const r = await fetch('api/comments');
+  return await r.json();
+}
+/* trả về 'ok' | 'limit' | 'err' */
+async function sendComment(text){
+  if (SB){
+    const ip = await myIP();
+    const chk = await fetch(SB.url + '?select=id&ip=eq.' + encodeURIComponent(ip), {headers: SB.hdr});
+    const rows = await chk.json();
+    if (Array.isArray(rows) && rows.length) return 'limit';    /* mỗi IP 1 tin */
+    const r = await fetch(SB.url, {
+      method:'POST',
+      headers: Object.assign({'Content-Type':'application/json', Prefer:'return=minimal'}, SB.hdr),
+      body: JSON.stringify({text, ip})
+    });
+    return r.ok ? 'ok' : 'err';
+  }
+  const r = await fetch('api/comments', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({text})
+  });
+  if (r.status === 429) return 'limit';
+  return r.ok ? 'ok' : 'err';
+}
+
 function spawnBubble(text){
   const el = document.createElement('div');
   el.className = 'flybubble';
@@ -634,12 +684,8 @@ document.getElementById('msgForm').addEventListener('submit', async e=>{
   if(!text) return;
   inp.value = '';
   try{
-    const r = await fetch('api/comments', {   /* lưu vào comment.json */
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({text})
-    });
-    if (r.status === 429){                    /* IP đã gửi rồi */
+    const st = await sendComment(text);
+    if (st === 'limit'){                       /* IP đã gửi rồi */
       inp.placeholder = 'Bạn đã gửi 1 lời nhắn rồi ✨';
       return;
     }
@@ -658,7 +704,7 @@ function laneY(){
 
 /* tải các comment cũ và cho chúng bay lượn */
 let commentList = [];
-fetch('api/comments').then(r=>r.json()).then(list=>{
+loadComments().then(list=>{
   if (Array.isArray(list)) commentList = list;
   let i = 0;
   const next = ()=>{
